@@ -25,3 +25,9 @@ Print all commits in the same way:
 ```bash
 git config --global alias.lsa "log --graph --abbrev-commit --decorate --format=format:'%C(bold blue)%h%C(reset) %C(bold green)(%ar)%C(reset) %C(white)%s%C(reset) %C(brightblack)/ %an%C(reset)%C(auto)%d%C(reset)' --all"
 ```
+
+## Commit
+
+```bash
+git config --global alias.cm 'commit -m'
+```
