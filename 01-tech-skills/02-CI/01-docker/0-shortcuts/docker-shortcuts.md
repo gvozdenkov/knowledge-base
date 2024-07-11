@@ -1,5 +1,11 @@
 # Docker shortcuts
 
+Connect to container shell:
+
+```bash
+docker exec -it container-name sh
+```
+
 To delete all containers including its volumes:
 
 ```bash
