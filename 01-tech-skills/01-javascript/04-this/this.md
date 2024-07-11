@@ -2,17 +2,24 @@
 
 `this` - это **не контекст**, как в других языках.
 
-`this` - это особый аргумент нормальной функции (не стрелочной). Любая нормальная функция вызывается минимум с 1 аргументом - `this`.
+`this` в JS - это особый идентификатор, который определён локально для всех normal functions (не стрелочных). По умолчанию задан как `undefined` для strict mode или как `global object` для non strict mode. Связать значение с `this` можно только особой формой вызова normal function.
 
-Чему равен `this` зависит от того КАК и КАКАЯ функция запускается.
+Значение `this` для normal function может быть изменено **только в момент вызова** этой функции и зависит от формы/способоа её вызова
 
-## Кратко
+Любая нормальная функция вызывается минимум с 1 аргументом - `this`. Он есть всегда. Этот аргумент всегда связывается с каким-то значением, **при вызове** функции. Задать `this` напрямую при вызове функции нельзя.
 
-1. Если находится не внутри кода функции, то важно находимся мы в script или module (малополезный случай)
-2. Если внутри module: `this = undefined`
-3. Если внутри script: this может быть любым. Задаёт host.
-4. Только **вызов функции** изменяет `this`. Кроме arrow function.
-5. Любая нормальная функция всегда имеет минимум 1 аргумент - `this`. Он есть всегда. И этот аргумент всегда связывается с каким-то значением, **при вызове** функции.
+## Коротко
+
+1. Вызов любой normal function по умолчанию связывает `this` с `undefined`
+2. Вызов normal function с ключевым словом `new` свяжет `this` с пустым объектом `{}`
+3. Можно явно задать `this` с помощью `call`, `apply`, `bind`
+   ```js
+   func.call(thisArg, ...args);
+   func.apply(thisArg, ...args);
+   func.bind(thisArg, ...args)();
+   ```
+4. Если normal function вызфывается в dot нотакции, то `this` будет связан со значением идентификатора, который стоит перед точкой
+5. Внешние API как угодно меняют значение `this`. Но! только в случае, если это normal function для которой `this` не задан специально с помощью `call`, `apply`, `bind`
 
 ## This и Global Environment
 
@@ -44,6 +51,84 @@ function logThis() {
 // 3. Как вызывается logThis ?
 // 4. Без call, apply, bind, new, не в dot нотации -> this = undefined
 logThis(); // this is: undefined
+```
+
+```js
+'use strict';
+
+// this внутри стрелочной функции. Нужно перейти в родительское окружение
+// Родительское окружение - где функци рождена = определена
+// Родительское окружение в данном случае - глобальное.
+// Для модуля будет undefined
+// Для скрипта будет global object.
+var arrowFunc = () => console.log('this is:', this);
+
+function logThis() {
+  arrowFunc();
+}
+
+logThis(); // this is: global object, Window в браузере
+```
+
+```js
+'use strict';
+
+var arrowFunc = () => console.log('this is:', this);
+
+var obj = {
+  name: 'User',
+  sayName() {
+    arrowFunc();
+  },
+};
+
+// Теже самые рассуждения, что и в примере выше
+obj.sayName(); // this is: global object
+```
+
+```js
+'use strict';
+
+var arrowFunc = () => console.log('this is:', this);
+
+var obj = {
+  name: 'User',
+  sayName: function () {
+    var arrowFunc = () => console.log('this is:', this);
+    arrowFunc();
+  },
+};
+
+// this внутри стрелочнйо функции
+// идём в родительское окружение. Это normal function
+// как эта функция вызывается? Через дот нотацию
+// this связан с объектом obj
+obj.sayName(); // this is: { name: 'User', sayName }
+```
+
+```js
+'use strict';
+
+var obj = {
+  name: 'User',
+  returnFunc: function () {
+    var arrowFunc = () => console.log('this is:', this);
+    return arrowFunc;
+  },
+};
+
+var superObj = {
+  name: 'Super User',
+  sayName: function (func) {
+    func();
+  },
+};
+
+// this внутри стрелочнйо функции
+// идём в родительское окружение. Это normal function
+// как эта функция вызывается? Через дот нотацию
+// this связан с объектом obj
+superObj.sayName(obj.returnFunc()); // { name: 'User', returnFunc }
 ```
 
 ![this and arrow function](./static/arrow-this.png)
@@ -169,7 +254,7 @@ obj.logThis(); // this is: { name: 'User', logThis }
 
 ### Внешние API
 
-Внешние API как хотят меняют `this`!
+Внешнее API может как хочет менять `this`, но только если это normal function, для которой `this` не был установлен принудительно.
 
 ```js
 'use strict';
@@ -182,7 +267,8 @@ var obj = {
 };
 
 // setTimeout - внешнее API. Оно задаёт this по своей спецификации
-setTimeout(obj.logThis, 1); // объект Window {...} в браузере
+// В случае бразера - это спецификация html5. В режиме модуль это undefined, в режиме скрипта - глобальный объект - window
+setTimeout(obj.logThis, 1);
 ```
 
 В случай addEventListener `this` будет связан с элементом, на котором висит слушатель события.
